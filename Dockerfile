@@ -1,5 +1,5 @@
 # Playwright+Pytnon公式イメージ（Chromium、Firefox、Webkit同梱）
-FROM mcr.microsoft.com/playwright/python:v1.42.0-jammy
+FROM mcr.microsoft.com/playwright/python:v1.53.0-jammy
 
 WORKDIR /app
 
