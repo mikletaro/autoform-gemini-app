@@ -1,7 +1,7 @@
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
-from playwright.sync_api import sync_playwright
+from playwright.async_api import async_playwright
 import json
 import os
 
@@ -16,37 +16,33 @@ async def read_root():
 
 @app.post("/search")
 async def execute_search(request: Request):
-    # フロントからの入力を取得
     data = await request.json()
     property_name = data.get("propertyName")
     if not property_name:
         raise HTTPException(status_code=400, detail="物件名を入力してください")
 
-    # ここに実際の検索サイトURL・セレクタを設定
-    SEARCH_URL = "https://www.e-mansion.co.jp/"  # ←実際の検索ページURLに変更
-    SEARCH_INPUT = 'input[name="q"]'
-    SEARCH_BUTTON = 'button[type="submit"]'
-    RESULT_SELECTOR = ".result-list"  # 検索結果が表示されるセレクタ
+    # 実際の検索サイトのURL・セレクタを入れてください
+    SEARCH_URL = "https://www.e-mansion.co.jp/"
+    SEARCH_INPUT = "#InputBox"
+    SEARCH_BUTTON = "button[type='submit']"
+    RESULT_SELECTOR = ".result-list"
 
-    # Playwrightで検索実行（ヘッドフルモードで画面表示）
-    with sync_playwright() as p:
-        browser = p.chromium.launch(headless=False)  # ←ユーザーに見える形で起動
-        context = browser.new_context()
-        page = context.new_page()
-        page.goto(SEARCH_URL)
-        # 検索ボックスに物件名を入力
-        page.fill(SEARCH_INPUT, property_name)
-        # 検索ボタンクリック
-        page.click(SEARCH_BUTTON)
-        # 検索結果が表示されるまで待機
-        page.wait_for_selector(RESULT_SELECTOR)
-        # 検索結果のHTMLを取得（次のステップでスレッドリンク抽出用）
-        result_html = page.inner_html(RESULT_SELECTOR)
-        context.close()
-        browser.close()
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=False)
+        context = await browser.new_context()
+        page = await context.new_page()
+        await page.goto(SEARCH_URL)
+        await page.fill(SEARCH_INPUT, property_name)
+        await page.click(SEARCH_BUTTON)
+        await page.wait_for_selector(RESULT_SELECTOR)
+        result_html = await page.inner_html(RESULT_SELECTOR)
+        print("=== 検索結果HTML（抜粋） ===")
+        print(result_html[:1000])
+        await context.close()
+        await browser.close()
 
     return {
         "status": "success",
         "propertyName": property_name,
-        "resultHtml": result_html  # ←次のステップでスレッドリンク抽出用
+        "resultHtml": result_html
     }
