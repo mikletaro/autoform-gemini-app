@@ -23,7 +23,7 @@ async def execute_search(request: Request):
         raise HTTPException(status_code=400, detail="物件名を入力してください")
 
     # ここに実際の検索サイトURL・セレクタを設定
-    SEARCH_URL = "https://example.com/search"  # ←実際の検索ページURLに変更
+    SEARCH_URL = "https://www.e-mansion.co.jp/"  # ←実際の検索ページURLに変更
     SEARCH_INPUT = 'input[name="q"]'
     SEARCH_BUTTON = 'button[type="submit"]'
     RESULT_SELECTOR = ".result-list"  # 検索結果が表示されるセレクタ
