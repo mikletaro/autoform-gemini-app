@@ -1,3 +1,7 @@
+from fastapi import FastAPI
+
+app = FastAPI()
+
 @app.post("/search")
 async def execute_search(request: Request):
     data = await request.json()
