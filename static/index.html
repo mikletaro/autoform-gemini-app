@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>物件検索自動化ツール</title>
+</head>
+<body>
+  <h1>物件検索自動化ツール</h1>
+  <form id="searchForm">
+    <label for="propertyName">物件名：</label>
+    <input type="text" id="propertyName" required>
+    <button type="submit">検索実行</button>
+  </form>
+  <div id="result"></div>
+  <script>
+    document.getElementById('searchForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const propertyName = document.getElementById('propertyName').value;
+      const response = await fetch('/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ propertyName })
+      });
+      const result = await response.json();
+      document.getElementById('result').innerHTML = 
+        `<p>検索が完了しました。</p>
+         <pre>${JSON.stringify(result, null, 2)}</pre>`;
+    });
+  </script>
+</body>
+</html>
