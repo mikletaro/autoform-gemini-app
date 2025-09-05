@@ -2,16 +2,22 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from playwright.async_api import async_playwright
-import json
+from pathlib import Path
 import os
 
 app = FastAPI()
-app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# 静的ファイルディレクトリを絶対パスで設定
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
-    with open("static/index.html", "r", encoding="utf-8") as f:
-        html = f.read()
+    index_path = STATIC_DIR / "index.html"
+    if not index_path.is_file():
+        raise HTTPException(status_code=404, detail="Index file not found")
+    html = index_path.read_text(encoding="utf-8")
     return html
 
 @app.post("/search")
@@ -24,35 +30,38 @@ async def execute_search(request: Request):
     SEARCH_URL = "https://www.e-mansion.co.jp/"
     SEARCH_INPUT = "#InputBox"
     SEARCH_BUTTON = "button.search-submit"
-    # 検索結果ページの主要エリア（実際の検索結果に合わせて要修正）
     RESULT_SELECTOR = ".search-results"
 
-    # 本番環境（Render等）ではheadless=True必須、開発時はFalseで動作確認
-    headless_mode = False
+    # 環境変数HEADLESS_MODEが"true"ならheadlessモードを有効にする
+    headless_mode = os.getenv("HEADLESS_MODE", "true").lower() == "true"
 
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=headless_mode)
-        context = await browser.new_context()
-        page = await context.new_page()
-        try:
+    browser = None
+    context = None
+    try:
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=headless_mode)
+            context = await browser.new_context()
+            page = await context.new_page()
             await page.goto(SEARCH_URL)
             await page.fill(SEARCH_INPUT, property_name)
             await page.click(SEARCH_BUTTON)
-            # 検索結果が表示されるまで待機（セレクタは実際の検索結果エリアに合わせる）
             await page.wait_for_selector(RESULT_SELECTOR)
             result_html = await page.inner_html(RESULT_SELECTOR)
-            print("=== 検索結果HTML（抜粋） ===")
-            print(result_html[:1000])
-        except Exception as e:
+    except Exception as e:
+        # 本番は詳細ログは控え、開発時のみ詳細返却（環境変数DEBUG_MODEで制御）
+        debug_mode = os.getenv("DEBUG_MODE", "false").lower() == "true"
+        detail = f"検索処理中にエラーが発生しました: {str(e)}" if debug_mode else "内部エラーが発生しました"
+        raise HTTPException(status_code=500, detail=detail)
+    finally:
+        if context:
             await context.close()
+        if browser:
             await browser.close()
-            raise HTTPException(status_code=500, detail=f"検索処理中にエラーが発生しました: {str(e)}")
-        await context.close()
-        await browser.close()
+
+    # result_htmlには生のHTMLが含まれるため、XSS対策はクライアント側で実施推奨
 
     return {
         "status": "success",
         "propertyName": property_name,
         "resultHtml": result_html
     }
-    
