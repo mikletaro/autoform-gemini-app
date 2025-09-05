@@ -1,6 +1,4 @@
-fastapi
-uvicorn
-google-generativeai
-playwright
-python-dotenv
-python-multipart
+flask==3.0.3
+flask-cors==4.0.1
+gunicorn==21.2.0
+google-generativeai>=0.7.0
