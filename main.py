@@ -55,3 +55,4 @@ async def execute_search(request: Request):
         "propertyName": property_name,
         "resultHtml": result_html
     }
+    
